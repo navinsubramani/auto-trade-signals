@@ -8,7 +8,7 @@ To Do:
 - [ ] create a "slash command" for the Bot Control so it easier for users to communicate.
 - [ ] create a "Bot Control" channel where the health of the Bot can be viewed
 
-- [ ] create a new server, channel and bot for trade signals
+- [x] create a new server, channel and bot for trade signals
 - [ ] Host the solution on a cloud server
 
 To Do:
