@@ -1,0 +1,5 @@
+yfinance
+matplotlib
+schedule
+python-dotenv
+discord.py
