@@ -3,6 +3,9 @@ import os
 import discord
 from discord.ext import tasks, commands
 
+from datetime import datetime
+from pytz import timezone
+
 from module.flow.generate_indicator import GenerateIndicator
 
 DATA_RANAGE_DAYS = int(os.getenv('DATA_RANAGE_DAYS'))
@@ -38,7 +41,12 @@ class SignalExecutionTask(commands.Cog):
     @tasks.loop(seconds=LOOP_INTERVAL_SECONDS)
     async def signal_executor(self):
         async with self.lock:
-            await self.execute_signal()
+            #Find if the current time is between 9AM Eastern to 5PM Eastern
+            current_time = datetime.now(timezone('US/Eastern'))
+            if current_time.hour < 9 or current_time.hour > 24:
+                print(f"Current time {current_time} is outside of trading hours. Skipping signal execution.")
+            else:
+                await self.gi.execute_gi(self.publish_signal)
 
     @signal_executor.before_loop
     async def before_signal_executor(self):
@@ -93,6 +101,11 @@ class SignalExecutionTask(commands.Cog):
             ticker_list = self.gi.Ticker_Manager.get_all_tickers().keys()
             ticker_list = ' | '.join(ticker_list)
             await ctx.reply(f"{ticker_list}")
+
+    @commands.command(name='show')
+    async def show(self, ctx, symbol: str):
+        async with self.lock:
+            await self.gi.excute_gi_ondemand(symbol, self.publish_signal)
 
     @tasks.loop(seconds=3600)
     async def status(self):

@@ -1,6 +1,8 @@
 import yfinance as yf
 import json
 import os
+import pandas as pd
+from datetime import datetime, timedelta
 
 # -----------------------------------------------------------
 # Create a python class for a ticker
@@ -24,12 +26,35 @@ class Ticker:
         """
         stock_data = yf.download(self.symbol, start=start_date, end=end_date, interval=interval)
 
+
+        # Define the function to add hours to time
+        def add_hours_to_time(time_str, hours_to_add):
+            # Parse the time string into a datetime object (using a dummy date)
+            time = datetime.strptime(time_str, "%H:%M")
+            # Add the specified number of hours using timedelta
+            new_time = time + timedelta(hours=hours_to_add)
+            # Return the new time in "HH:MM" format
+            return new_time.strftime("%H:%M")
+        
+
         # Convert from UTC to Eastern Time (if data is already tz-aware)
         if stock_data.index.tzinfo is not None:
             stock_data.index = stock_data.index.tz_convert(timezone)
         else:
             # If for any reason data is tz-naive, localize to UTC and then convert
             stock_data.index = stock_data.index.tz_localize('UTC').tz_convert(timezone)
+
+        new_data = pd.DataFrame()
+        new_data['time'] = stock_data.index.time
+        new_data['time'] = new_data['time'].apply(lambda x: str(x).split(':')[0] + ':' + str(x).split(':')[1])
+        new_data['datetime'] = stock_data.index
+        new_data['offset'] = new_data['datetime'].apply(lambda x: int(str(x).split('-')[-1].split(':')[0]))
+
+        # Apply the function to each row in the DataFrame
+        stock_data['date'] = stock_data.index.date
+        stock_data.reset_index(inplace=True)
+        #stock_data['time'] = new_data.apply(lambda row: add_hours_to_time(row['time'], row['offset']), axis=1)
+        stock_data['time (EDT)'] = new_data['time']
 
         # summarize the stock information using pandas function
         #print(stock_data.head())

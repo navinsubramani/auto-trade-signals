@@ -2,3 +2,5 @@ yfinance == 0.2.37
 matplotlib == 3.8.4
 python-dotenv == 1.0.1
 discord.py == 2.3.2
+llama_index
+llama-index-experimental

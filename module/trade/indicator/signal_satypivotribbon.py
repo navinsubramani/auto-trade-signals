@@ -78,14 +78,14 @@ class SignalSatypePivotRibbon(SignalBase):
         elif row["Bearish_Conviction"]:
             conviction_current_state = "bearish"
 
-        # If one of the pivot state changes, then it is a signal
-        if pivot_last_state != pivot_current_state or conviction_last_state != conviction_current_state:
+        # If one of the conviction state changes, then it is a signal
+        if conviction_last_state != conviction_current_state:
             cache["pivot_last_state"] = pivot_current_state
             cache["conviction_last_state"] = conviction_current_state
             self.write_cache(ticker.symbol, self.signal_name, cache)
             #print(cache)
 
-            sentiment = "Buy" if pivot_current_state == "bullish_cloud" else "Sell"
+            sentiment = "Buy" if conviction_current_state == "bullish" else "Sell"
 
             return {
                 "signal": True,
@@ -134,13 +134,24 @@ Conviction State {self.fast_conviction_ema}ema & {self.slow_conviction_ema}ema: 
         df['Bullish_Conviction'] = df['Fast_Conviction_EMA'] > df['Slow_Conviction_EMA']
         df['Bearish_Conviction'] = df['Fast_Conviction_EMA'] < df['Slow_Conviction_EMA']
 
+        # determine the bullish or bearish volume trend
+        volume_color = ['grey']
+        for i in range(1, len(df['Close'])):
+            if df['Close'].iloc[i] > df['Close'].iloc[i-1]:
+                volume_color.append('green')
+            elif df['Close'].iloc[i] < df['Close'].iloc[i-1]:
+                volume_color.append('red')
+            else:
+                volume_color.append(volume_color[-1]) # same as the previous color
+        df['Volume_Color'] = volume_color
+
         # From the dataframe, get only the last 80 elements as a sample dataframe
         # Remove the Index
         df = df.tail(80)
         df.reset_index(inplace=True)
 
         # Plotting
-        fig, ax = plt.subplots(figsize=(15, 10))
+        fig, (ax, ax1) = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [4, 1]})
 
         # Plot EMAs
         ax.plot(df.index, df['Close'], label='Close Price', color='black', alpha=0.3)
@@ -158,10 +169,10 @@ Conviction State {self.fast_conviction_ema}ema & {self.slow_conviction_ema}ema: 
         pivot_last_state = None
         for date, row in df.iterrows():
             if row['Fast_EMA'] >= row['Pivot_EMA'] and row['Pivot_EMA'] >= row['Slow_EMA'] and pivot_last_state != 'bullish cloud':
-                ax.annotate('Bullish Clouds', xy=(date, row['Slow_EMA']), xytext=(date, row['Slow_EMA'] * 0.995), arrowprops=dict(facecolor='green', shrink=0.005))
+                ax.annotate('^ Clouds', xy=(date, row['Slow_EMA']), xytext=(date, row['Slow_EMA'] * 0.995), arrowprops=dict(facecolor='green', shrink=0.005))
                 pivot_last_state = 'bullish cloud'
             elif row['Fast_EMA'] < row['Pivot_EMA'] and row['Pivot_EMA'] < row['Slow_EMA'] and pivot_last_state != 'bearish cloud':
-                ax.annotate('Bearish Clouds', xy=(date, row['Slow_EMA']), xytext=(date, row['Slow_EMA'] * 1.005), arrowprops=dict(facecolor='red', shrink=0.005))
+                ax.annotate('v Clouds', xy=(date, row['Slow_EMA']), xytext=(date, row['Slow_EMA'] * 1.005), arrowprops=dict(facecolor='red', shrink=0.005))
                 pivot_last_state = 'bearish cloud'
 
         # Plot Conviction Arrows based on 13 & 48 EMA
@@ -169,28 +180,32 @@ Conviction State {self.fast_conviction_ema}ema & {self.slow_conviction_ema}ema: 
         for date, row in df.iterrows():
             # find if it is currently bullish or bearish and only when there is a state change from last, make a annotation
             if row['Bullish_Conviction'] and last_state != 'bullish':
-                ax.annotate('Bullish Conviction', xy=(date, row['Slow_EMA']), xytext=(date, row['Slow_EMA'] * 0.995), arrowprops=dict(facecolor='green', shrink=0.005))
+                ax.annotate('^ Conviction', xy=(date, row['Slow_EMA']), xytext=(date, row['Slow_EMA'] * 0.995), arrowprops=dict(facecolor='green', shrink=0.005))
                 last_state = 'bullish'
             elif row['Bearish_Conviction'] and last_state != 'bearish':
-                ax.annotate('Bearish Conviction', xy=(date, row['Fast_EMA']), xytext=(date, row['Fast_EMA'] * 1.005), arrowprops=dict(facecolor='red', shrink=0.005))
+                ax.annotate('v Conviction', xy=(date, row['Fast_EMA']), xytext=(date, row['Fast_EMA'] * 1.005), arrowprops=dict(facecolor='red', shrink=0.005))
                 last_state = 'bearish'
 
+        ax.set_ylabel('Price')
 
-        # Candlestick bias coloring (as bars for simplicity)
-        #ax.bar(df.index, df['Close'] - df['Open'], bottom=df['Open'], color=df.apply(lambda row: 'green' if row['Close'] > row['Bias_EMA'] else 'red', axis=1), zorder=3)
+        #Axis2 with bar plot
+        ax1.bar(df.index, df['Volume'], color=df['Volume_Color'], alpha=0.3)
+        ax1.set_xlabel('5min TICKS')
+        ax1.set_ylabel('Volume')
+        ax1.grid(True)
 
         # Final plot adjustments
-        #timezone = pytz.timezone("America/New_York")
-        #ax.xaxis.set_major_locator(plt.MaxNLocator(15))
-        #ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(mdates.DateFormatter('%m-%d - %H:%M', tz=timezone)))
-        ax.legend()
+        #ax.legend()
         plt.xticks(rotation=45)
-        plt.title('Saty Pivot Ribbon Simulation')
-        plt.xlabel('Sample Data Index')
-        plt.ylabel('Price')
-        plt.grid(True)
-        #plt.show()
+        #plt.title('Saty Pivot Ribbon Simulation')
+        plt.xlabel('5min TICKS')
         
+        plt.grid(True)
+
+        # Adjust layout to prevent overlap
+        plt.tight_layout()
+        #plt.show()
+
         # Save the plot to a BytesIO object
         buf = io.BytesIO()
         plt.savefig(buf, format='png')

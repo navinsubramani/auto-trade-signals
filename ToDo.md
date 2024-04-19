@@ -12,7 +12,19 @@ To Do:
 - [ ] Host the solution on a cloud server
 
 To Do:
+- [x] Create a plot with volume and EMA trends
 - [ ] Create a signal that find the increase in volume for a stock
 - [ ] Create a signal that find the reversal, accompanied with increase in volume and two new highs/lows
 
 - [ ] Create a signal fpr SPY, which will give the overall market direction every day
+
+To Do:
+- [x] AI bot for stock market
+- [ ] Answer questions on multiple stocks or stocks at different interval, summarize and answer
+- [ ] leverage different API from yFinanance
+- [ ] Better analysis on the stock market data and provide response to the user
+- [ ] Create a visualization based on the question if required.
+
+Test:
+- [ ] Every 20 sec test in loop (new symbol and existing symbol and invalid symbol)
+- [ ] !show flow (new symbol and existing symbol and invalid symbol)
